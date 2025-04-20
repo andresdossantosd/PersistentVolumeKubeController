@@ -17,43 +17,24 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// Importa el paquete context para manejar contextos en las solicitudes
-// Importa el paquete flag para el manejo de argumentos de linea de comandos
-// Importa el paquete fmt para formatear cadenas
-
-// Importa el paquete time para manejar tiempos y duraciones
-
-// Importa el cliente de Kubernetes para interactuar con el cluster
-// Importa herramientas de cache para manejar controladores e informadores
-// Importa herramientas para construir la configuracion del cliente
-// Importa herramientas para manejar campos de recursos de Kubernetes
-// Importa definiciones de la API de Kubernetes, como metadatos
-// Importa definiciones de la API de Kubernetes, como PersistentVolume
-
 func main() {
 	// utilizamos flag para parsear los parametros de entrada de entrada del programa
 	kubeconfig := flag.String("kubeconfig", "/home/master/.kube/config", "Ruta absoluta al .config de kubectl")
 	flag.Parse()
 	// construye configuracion del cliente --> clientcmd.BuildConfigFromFlags(masterUrl string, kubeconfigPath string) builds configs from a master url or a kubeconfig filepath
+	// creamos la configuración del cliente partiendo del fichero del kubeconfig (OJO: solo la configuración)
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
 		log.Fatalf("FAIL: configuracion del ~/.kube/config --> %s", err.Error())
 	}
 
-	// creamos cliente de kubernetes usando el config para conectarnos con el api-server del Cluster --> kubernetes.NewForConfig(c *rest.Config) (*kubernetes.Clientset, error) NewForConfig creates a new Clientset for the given config
+	// creamos cliente con la configuración `config` que creamos previamente para conectarnos al api-server del Cluster --> kubernetes.NewForConfig(c *rest.Config) (*kubernetes.Clientset, error) NewForConfig creates a new Clientset for the given config
 	cliente, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		log.Fatalf("FAIL: creando el cliente que se conectara a la API --> %s", err.Error())
 	}
 
-	// Creamos un watcher para los Persistent volumes, listaremos y observamos los PV's -->
-	// cache.NewListWatchFromClient(
-	// 		c cache.Getter, --> client
-	// 		resource string, --> resoruce
-	// 		namespace string, --> Kubernetes namespace
-	// 		fieldSelector fields.Selector --> field selector (labels), parsing and matching selectors with sets of fields.
-	// ) *cache.ListWatch NewListWatchFromClient creates a new ListWatch from the specified client, resource, namespace and field selector.
-	// "So we have a little component that can list and watch things of a particular type"
+	// Creamos un watcher para los Persistent volumes. Recibira/listara los cambios en el api-server sobre recursos de PV's (es como usar ?watch=true)
 	watcher := cache.NewListWatchFromClient(
 		cliente.CoreV1().RESTClient(), // utilizar cliente REST de Kubernetes v1
 		"persistentvolumes",           // para observar persistent volumes
@@ -61,15 +42,8 @@ func main() {
 		fields.Everything(),           // Everything() returns a selector that matches all fields. --> Package fields implements a simple field system, parsing and matching selectors with sets of fields
 	)
 
-	// El piso '_' es un blank identifier, para asi no declarar todas los parametros de salida de una funcion
-	// Definimos el informador del controlador: quien se va a encargar de escuchar eventos de el watcher
-	// 	NewInformer(
-	// 		lw cache.ListerWatcher, --> lw is list and watch functions for the source of the resource you want to be informed of
-	// 		objType runtime.Object, --> objType is an object of the type that you expect to receive.
-	// 		resyncPeriod time.Duration, --> if non-zero, will re-list this often (you will get OnUpdate calls, even if nothing changed). Otherwise, re-list will be delayed as long as possible (until the upstream source closes the watch or times out, or you stop the controller).
-	// 		h cache.ResourceEventHandler --> ResourceEventHandlerFuncs is an adaptor to let you easily specify as many or as few of the notification functions as you want while still implementing ResourceEventHandler. This adapter does not remove the prohibition against modifying the objects.
-	// 	) (cache.Store, cache.Controller)
-	// NewInformer returns a Store and a controller for populating the store while also providing event notifications. You should only used the returned Store for Get/List operations; Add/Modify/Deletes will cause the event notifications to be faulty.
+	// Definimos el informador del controlador: quien se va a encargar de escuchar eventos provenientes del watcher creado watcher
+	// NewInformer returns a Store and a controller for populating the store while also providing event notifications.
 	_, controlador := cache.NewInformer(
 		watcher,
 		&v1.PersistentVolume{},
@@ -104,14 +78,6 @@ func main() {
 					// mensaje del evento
 					Message: "Persistent Volume created: " + pv.Name,
 					// la fuente del evento, y especificamos dentro el componente que genera el evento, es decir, EL CONTROLADOR DEL PERSISTENT VOLUME:
-					// 	type EventSource struct {
-					// 		// Component from which the event is generated.
-					// 		// +optional
-					// 		Component string `json:"component,omitempty" protobuf:"bytes,1,opt,name=component"`
-					// 		// Node name on which the event is generated.
-					// 		// +optional
-					// 		Host string `json:"host,omitempty" protobuf:"bytes,2,opt,name=host"`
-					// 	}
 					// EventSource contains information for an event.
 					Source: v1.EventSource{
 						Component: "pv-controller",

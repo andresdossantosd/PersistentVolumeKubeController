@@ -1,26 +1,25 @@
 # PersistentVolumeKubeController
 
-This is a custom controller for Kubernetes. It watches for PersistentVolumeClaim (PVC) objects and manages PersistentVolumes (PV) for them.
+This is a custom controller for Kubernetes. It watches for PersistentVolumes (PV)  objects and manages them.
 
-When a PVC is created, the controller makes a PV for it. If the PVC is deleted, the controller deletes the PV. It also updates the PV if needed.
+When a PV is created, the controller will create an event of creation. By default, kubernetes cluster 1.29 does not create PV creation and deletion event.
 
 ## How it works
 
-The controller runs inside the cluster and uses the Kubernetes API to watch PVCs. It creates and manages PVs to match those claims.
+The controller runs inside the cluster and uses the Kubernetes apiserver to watch PVs. It creates and manages PVs to match those claims.
 
 Here is a diagram that shows the idea:
 
-![controller-diagram](https://raw.githubusercontent.com/andresdossantosd/PersistentVolumeKubeController/main/controller-diagram.png)
+![controller-diagram](image.png)
 
-- The controller is running as a pod in the cluster.
-- It listens for changes in PVCs on ETCD.
-- When a PVC is created, it makes a PV for it.
-- If a PVC is updated or deleted, it updates or deletes the PV too.
+- The controller is running as a pod in the cluster, or even as a OS service running on control plane node.
+- It listens for changes in PV's on ETCD by apiserver.
 
-## Run it
-
-You can build the controller and run it inside a Kubernetes cluster.
+## Running controller
 
 ```bash
-go build -o controller .
+cd pvController
+go get <dependencies>
+go build -o pv_controller .
+./pv_controller
 ```

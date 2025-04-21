@@ -42,7 +42,7 @@ func main() {
 		fields.Everything(),           // Everything() returns a selector that matches all fields. --> Package fields implements a simple field system, parsing and matching selectors with sets of fields
 	)
 
-	// Definimos el informador del controlador: quien se va a encargar de escuchar eventos provenientes del watcher creado watcher
+	// Definimos el informador del controlador: quien se va a encargar de escuchar eventos provenientes del watcher creado
 	// NewInformer returns a Store and a controller for populating the store while also providing event notifications.
 	_, controlador := cache.NewInformer(
 		watcher,
